@@ -14,6 +14,9 @@ The Windows edition of [TypeThru for macOS](https://github.com/sayre4ux/TypeThru
   end is left out, so a copied command never runs by itself.
 - **Stops instantly** when you press Esc, click, or switch windows.
 - **Your shortcut**: Ctrl+; by default, or choose your own.
+- **The Type button**: full-screen VDI clients grab every key, so the shortcut cannot
+  reach your PC. The small always-on-top "T" button always works - click it, then
+  click where the text should go. Drag it anywhere; right-click hides it.
 - **Lightweight**: a single 1 MB executable, no runtime dependencies, no background services.
 - **Privacy**: the clipboard is read once when you trigger typing and never written
   anywhere. No logging, no telemetry. The only network request is the daily update
@@ -43,10 +46,12 @@ and open `TypeThru.exe`. When Windows shows "protected your PC", choose
 **Installer**: `TypeThru-Setup-<version>.exe` does the same and adds shortcuts plus an
 optional start-at-sign-in entry (per-user only; no admin needed).
 
-1. Open TypeThru. Its icon sits in the notification area.
+1. Open TypeThru. Its icon sits in the notification area, and the "T" Type button
+   sits in the corner of the screen.
 2. Copy the text you want to send.
 3. Click into the text field in your remote session.
-4. Press **Ctrl+;** (or click the TypeThru icon → **Type Clipboard**).
+4. Press **Ctrl+;**, or - in a full-screen session where the keyboard belongs to the
+   remote desktop - click the **T** button first, then click the text field.
 
 Keep the keyboard layout on this PC and in the remote session the same, as with a real
 keyboard. TypeThru cannot type into windows that run elevated (as administrator) unless

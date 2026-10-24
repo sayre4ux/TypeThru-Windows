@@ -37,6 +37,7 @@ void Settings::load() {
         replaceSymbols = readDword(key, L"ReplaceSymbols", 1) != 0;
         shiftReturn = readDword(key, L"ShiftReturn", 1) != 0;
         checkUpdates = readDword(key, L"CheckUpdates", 1) != 0;
+        floatButton = readDword(key, L"FloatButton", 1) != 0;
         Shortcut loaded;
         loaded.vk = readDword(key, L"ShortcutVK", Shortcut::standard().vk);
         loaded.modifiers = readDword(key, L"ShortcutMods", Shortcut::standard().modifiers);
@@ -52,6 +53,7 @@ void Settings::save() const {
         writeDword(key, L"ReplaceSymbols", replaceSymbols ? 1 : 0);
         writeDword(key, L"ShiftReturn", shiftReturn ? 1 : 0);
         writeDword(key, L"CheckUpdates", checkUpdates ? 1 : 0);
+        writeDword(key, L"FloatButton", floatButton ? 1 : 0);
         writeDword(key, L"ShortcutVK", shortcut.vk);
         writeDword(key, L"ShortcutMods", shortcut.modifiers);
         RegCloseKey(key);

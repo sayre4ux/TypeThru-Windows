@@ -12,6 +12,9 @@ struct Settings {
     bool replaceSymbols = true;
     bool shiftReturn = true;    // DECISION: on by default, like macOS; chat apps get a new line
     bool checkUpdates = true;
+    // DECISION: on by default. Full-screen VDI clients grab every key, so a local
+    // hotkey cannot reach us; the click button is the one trigger that always works.
+    bool floatButton = true;
     Shortcut shortcut = Shortcut::standard();
 
     void load();

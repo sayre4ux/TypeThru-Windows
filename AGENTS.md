@@ -63,7 +63,11 @@ Run `scripts\test.cmd` after every code change and `scripts\check.cmd` before a 
 
 ## Architecture
 
-**Trigger.** RegisterHotKey (Ctrl+; = VK_OEM_1 + MOD_CONTROL, `MOD_NOREPEAT`) fires
+**Trigger.** Full-screen VDI clients swallow every key before RegisterHotKey runs,
+so the floating Type button (WS_EX_NOACTIVATE, always on top, click = the panel's
+Type Clipboard flow; drag moves it, right-click hides it, position saved in the
+registry) is on by default and is the trigger that works everywhere. Otherwise,
+RegisterHotKey (Ctrl+; = VK_OEM_1 + MOD_CONTROL, `MOD_NOREPEAT`) fires
 WM_HOTKEY on key-down; the run then waits for all modifiers and the key itself to be
 released before typing (the remote client receives the physical key-up sequence first).
 The panel's "Type Clipboard" waits 1 s (tests 3 s) for the user to click the target

@@ -38,7 +38,7 @@ std::wstring utf8(const char* text) {
 
 enum {
     IDC_STATUS = 100, IDC_METHOD_LABEL, IDC_METHOD, IDC_SPEED_LABEL, IDC_SPEED,
-    IDC_REPLACE, IDC_SHIFTENTER, IDC_TYPE, IDC_TEST_LABEL, IDC_TEST, IDC_RUNTEST,
+    IDC_REPLACE, IDC_SHIFTENTER, IDC_FLOATBTN, IDC_TYPE, IDC_TEST_LABEL, IDC_TEST, IDC_RUNTEST,
     IDC_UPDATE_STATUS, IDC_INSTALL, IDC_SETTINGS_BTN, IDC_DIAGNOSTICS, IDC_QUIT,
     IDS_SHORTCUT_LABEL = 200, IDS_NOTE, IDS_CHANGE, IDS_RESET, IDS_RUNLOGIN,
     IDS_CHECKUPDATES, IDS_UNINSTALL, IDS_DONE,
@@ -48,6 +48,7 @@ constexpr UINT WM_APP_TRAY = WM_APP + 1;
 constexpr UINT WM_APP_TYPEDONE = WM_APP + 2;   // wParam = new TypeResult*, lParam = target name wchar_t*
 constexpr UINT WM_APP_UPDATECHECKED = WM_APP + 3;
 constexpr UINT WM_APP_UPDATEINSTALLED = WM_APP + 4;   // lParam = new std::wstring error or nullptr
+constexpr UINT WM_APP_CLOSEPANEL = WM_APP + 5;
 constexpr UINT HOTKEY_ID = 1;
 constexpr UINT TIMER_FIRST_CHECK = 1;
 constexpr UINT TIMER_HOURLY = 2;
@@ -58,6 +59,7 @@ HINSTANCE g_instance = nullptr;
 HWND g_window = nullptr;          // hidden window: tray, hotkey, timers
 HWND g_panel = nullptr;
 HWND g_settingsWindow = nullptr;
+HWND g_floatButton = nullptr;     // always-on-top click trigger for full-screen VDI
 NOTIFYICONDATAW g_tray = {};
 HFONT g_font = nullptr;
 HFONT g_fontBold = nullptr;
@@ -357,12 +359,14 @@ void layoutPanel(HWND panel) {
     placeControl(panel, IDC_SETTINGS_BTN, 16, 356, 90, 28);
     placeControl(panel, IDC_DIAGNOSTICS, 112, 356, 98, 28);
     placeControl(panel, IDC_QUIT, 216, 356, 88, 28);
+    placeControl(panel, IDC_FLOATBTN, 16, 392, 288, 22);
 }
 
 void syncPanel() {
     if (!g_panel) return;
     CheckDlgButton(g_panel, IDC_REPLACE, g_settings.replaceSymbols ? BST_CHECKED : BST_UNCHECKED);
     CheckDlgButton(g_panel, IDC_SHIFTENTER, g_settings.shiftReturn ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton(g_panel, IDC_FLOATBTN, g_settings.floatButton ? BST_CHECKED : BST_UNCHECKED);
     SendMessageW(GetDlgItem(g_panel, IDC_METHOD), CB_RESETCONTENT, 0, 0);
     for (int i = 0; i < methodCount; i++) {
        ComboBox_AddString(GetDlgItem(g_panel, IDC_METHOD), utf8(methodShortTitle(static_cast<Method>(i))).c_str());
@@ -397,8 +401,6 @@ void syncPanel() {
 HHOOK g_panelClickHook = nullptr;
 DWORD g_panelClosedAt = 0;
 
-constexpr UINT WM_APP_CLOSEPANEL = WM_APP + 5;
-
 static bool windowBelongsToPanel(HWND window) {
     // Walk the parent chain to the root, then any owner chain (combo dropdown lists
     // are top-level windows owned by controls inside the panel).
@@ -432,7 +434,7 @@ void showPanel() {
     SystemParametersInfoW(SPI_GETWORKAREA, 0, &area, 0);
     POINT cursor = {};
     GetCursorPos(&cursor);
-    int width = panelScale(g_panel, 320), height = panelScale(g_panel, 396);
+    int width = panelScale(g_panel, 320), height = panelScale(g_panel, 424);
     int x = cursor.x - width - 12;
     int y = cursor.y - height - 12;
     if (y < area.top) y = area.top + 8;
@@ -455,6 +457,142 @@ void closePanel() {
     }
 }
 
+// ---------- floating Type button ----------
+
+// Full-screen VDI clients grab every key before local hotkeys run, so a click is
+// the one trigger that always reaches us. A small always-on-top button, off in the
+// corner: click = Type Clipboard (then click the target field), drag = move it,
+// right-click = hide (bring it back from the panel).
+constexpr int floatButtonSize = 34;
+
+static void saveFloatPosition(int x, int y) {
+    RegSetKeyValueW(HKEY_CURRENT_USER, L"Software\\TypeThru", L"FloatX", REG_DWORD,
+                    &x, sizeof(x));
+    RegSetKeyValueW(HKEY_CURRENT_USER, L"Software\\TypeThru", L"FloatY", REG_DWORD,
+                    &y, sizeof(y));
+}
+
+static POINT savedFloatPosition(int size) {
+    int x = 0, y = 0;
+    DWORD value = 0, sizeOut = sizeof(value);
+    if (RegGetValueW(HKEY_CURRENT_USER, L"Software\\TypeThru", L"FloatX", RRF_RT_REG_DWORD,
+                     nullptr, &value, &sizeOut) == ERROR_SUCCESS) {
+        x = static_cast<int>(value);
+    }
+    sizeOut = sizeof(value);
+    if (RegGetValueW(HKEY_CURRENT_USER, L"Software\\TypeThru", L"FloatY", RRF_RT_REG_DWORD,
+                     nullptr, &value, &sizeOut) == ERROR_SUCCESS) {
+        y = static_cast<int>(value);
+    }
+    RECT area = {};
+    SystemParametersInfoW(SPI_GETWORKAREA, 0, &area, 0);
+    if (x == 0 && y == 0) {   // first run: the low corner, away from most content
+        x = area.right - size - 24;
+        y = area.bottom - size - 24;
+    }
+    // Clamp whatever we have back into the visible work area.
+    if (x < area.left) x = area.left + 8;
+    if (y < area.top) y = area.top + 8;
+    if (x + size > area.right) x = area.right - size - 8;
+    if (y + size > area.bottom) y = area.bottom - size - 8;
+    return POINT{x, y};
+}
+
+static LRESULT CALLBACK floatButtonProc(HWND button, UINT message, WPARAM wParam, LPARAM lParam) {
+    static bool dragging = false;
+    static POINT pressAt = {};
+    static POINT windowAt = {};
+    switch (message) {
+        case WM_PAINT: {
+            PAINTSTRUCT paint;
+            HDC dc = BeginPaint(button, &paint);
+            RECT client;
+            GetClientRect(button, &client);
+            FillRect(dc, &client, reinterpret_cast<HBRUSH>(GetStockObject(WHITE_BRUSH)));
+            HBRUSH background = CreateSolidBrush(RGB(0, 110, 220));
+            HRGN shape = CreateRoundRectRgn(client.left + 1, client.top + 1,
+                                            client.right - 1, client.bottom - 1, 10, 10);
+            FillRgn(dc, shape, background);
+            DeleteObject(shape);
+            DeleteObject(background);
+            SetBkMode(dc, TRANSPARENT);
+            SetTextColor(dc, RGB(255, 255, 255));
+            HFONT font = CreateFontW((client.bottom - client.top) * 2 / 3, 0, 0, 0, FW_SEMIBOLD,
+                                     0, 0, 0, DEFAULT_CHARSET, 0, 0, CLEARTYPE_QUALITY,
+                                     DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI");
+            HFONT previous = static_cast<HFONT>(SelectObject(dc, font));
+            SetWindowTextW(button, L"Type clipboard");
+            DrawTextW(dc, L"T", 1, &client, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+            SelectObject(dc, previous);
+            DeleteObject(font);
+            EndPaint(button, &paint);
+            return 0;
+        }
+        case WM_SETCURSOR:
+            SetCursor(LoadCursorW(nullptr, IDC_HAND));
+            return TRUE;
+        case WM_LBUTTONDOWN:
+            dragging = true;
+            GetCursorPos(&pressAt);
+            RECT current;
+            GetWindowRect(button, &current);
+            windowAt = POINT{current.left, current.top};
+            SetCapture(button);
+            return 0;
+        case WM_MOUSEMOVE:
+            if (dragging) {
+                POINT at;
+                GetCursorPos(&at);
+                SetWindowPos(button, nullptr, windowAt.x + at.x - pressAt.x,
+                             windowAt.y + at.y - pressAt.y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+            }
+            return 0;
+        case WM_LBUTTONUP: {
+            bool moved = false;
+            if (dragging) {
+                dragging = false;
+                ReleaseCapture();
+                POINT now;
+                GetCursorPos(&now);
+                moved = abs(now.x - pressAt.x) + abs(now.y - pressAt.y) > 4;
+            }
+            if (moved) {
+                RECT placed;
+                GetWindowRect(button, &placed);
+                saveFloatPosition(placed.left, placed.top);
+            } else if (!g_busy && !g_installing) {
+                // Same flow as the panel's Type Clipboard: click the target field next.
+                trigger(true, nullptr);
+            } else {
+                MessageBeep(MB_ICONEXCLAMATION);
+            }
+            return 0;
+        }
+        case WM_RBUTTONUP:
+            g_settings.floatButton = false;
+            g_settings.save();
+            ShowWindow(button, SW_HIDE);
+            syncPanel();
+            return 0;
+    }
+    return DefWindowProcW(button, message, wParam, lParam);
+}
+
+void applyFloatButton() {
+    if (g_settings.floatButton) {
+        if (!g_floatButton) {
+            int size = floatButtonSize * GetDpiForSystem() / 96;
+            POINT at = savedFloatPosition(size);
+            g_floatButton = CreateWindowExW(WS_EX_NOACTIVATE | WS_EX_TOPMOST | WS_EX_TOOLWINDOW,
+                                            L"TypeThruFloat", L"Type clipboard", WS_POPUP,
+                                            at.x, at.y, size, size, g_window, nullptr, g_instance, nullptr);
+        }
+        ShowWindow(g_floatButton, SW_SHOWNOACTIVATE);
+    } else if (g_floatButton) {
+        ShowWindow(g_floatButton, SW_HIDE);
+    }
+}
+
 LRESULT CALLBACK panelProc(HWND panel, UINT message, WPARAM wParam, LPARAM lParam) {
     switch (message) {
         case WM_CREATE: {
@@ -473,6 +611,8 @@ LRESULT CALLBACK panelProc(HWND panel, UINT message, WPARAM wParam, LPARAM lPara
                             0, 0, 0, 0, panel, reinterpret_cast<HMENU>(static_cast<INT_PTR>(IDC_REPLACE)), g_instance, nullptr);
             CreateWindowExW(0, L"BUTTON", L"New lines as Shift+Enter", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
                             0, 0, 0, 0, panel, reinterpret_cast<HMENU>(static_cast<INT_PTR>(IDC_SHIFTENTER)), g_instance, nullptr);
+            CreateWindowExW(0, L"BUTTON", L"Show the Type button (works in full-screen VDI)", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+                            0, 0, 0, 0, panel, reinterpret_cast<HMENU>(static_cast<INT_PTR>(IDC_FLOATBTN)), g_instance, nullptr);
             CreateWindowExW(0, L"BUTTON", L"Type Clipboard", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
                             0, 0, 0, 0, panel, reinterpret_cast<HMENU>(static_cast<INT_PTR>(IDC_TYPE)), g_instance, nullptr);
             CreateWindowExW(0, L"STATIC", L"Test", WS_CHILD | WS_VISIBLE, 0, 0, 0, 0, panel,
@@ -524,6 +664,10 @@ LRESULT CALLBACK panelProc(HWND panel, UINT message, WPARAM wParam, LPARAM lPara
             } else if (id == IDC_SHIFTENTER && code == BN_CLICKED) {
                 g_settings.shiftReturn = IsDlgButtonChecked(panel, IDC_SHIFTENTER) == BST_CHECKED;
                 g_settings.save();
+            } else if (id == IDC_FLOATBTN && code == BN_CLICKED) {
+                g_settings.floatButton = IsDlgButtonChecked(panel, IDC_FLOATBTN) == BST_CHECKED;
+                g_settings.save();
+                applyFloatButton();
             } else if (id == IDC_SETTINGS_BTN && code == BN_CLICKED) {
                 closePanel();
                 showSettingsWindow();
@@ -887,6 +1031,13 @@ int runTrayApp(HINSTANCE instance) {
     settingsClass.lpszClassName = L"TypeThruSettings";
     RegisterClassW(&settingsClass);
 
+    WNDCLASSW floatClass{};
+    floatClass.lpfnWndProc = floatButtonProc;
+    floatClass.hInstance = instance;
+    floatClass.hbrBackground = nullptr;
+    floatClass.lpszClassName = L"TypeThruFloat";
+    RegisterClassW(&floatClass);
+
     g_window = CreateWindowExW(0, L"TypeThruWindow", L"TypeThru", WS_OVERLAPPED,
                                0, 0, 0, 0, nullptr, nullptr, instance, nullptr);
 
@@ -914,6 +1065,7 @@ int runTrayApp(HINSTANCE instance) {
             g_updateStatus = L"Version " + saved->version + L" is available.";
         }
     }
+    applyFloatButton();
     SetTimer(g_window, TIMER_FIRST_CHECK, 10 * 1000, nullptr);
 
     MSG message;
