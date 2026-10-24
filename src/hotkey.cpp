@@ -7,7 +7,7 @@ static bool hasFlag(UINT modifiers, UINT flag) { return (modifiers & flag) != 0;
 
 static bool isFunctionKey(UINT vk) { return vk >= VK_F1 && vk <= VK_F20; }
 
-Shortcut Shortcut::standard() { return Shortcut{VK_OEM_5, MOD_CONTROL}; }
+Shortcut Shortcut::standard() { return Shortcut{VK_OEM_1, MOD_CONTROL}; }
 
 std::wstring Shortcut::problem() const {
     if (vk == VK_ESCAPE) return L"Esc stops typing, so it cannot start it.";

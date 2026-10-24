@@ -9,9 +9,11 @@ struct Shortcut {
     UINT vk = 0;
     UINT modifiers = 0;   // MOD_CONTROL / MOD_ALT / MOD_SHIFT / MOD_WIN
 
-    // DECISION: Ctrl+Backslash by default, the same key as macOS. The hotkey consumes its key
-    // but not its modifiers, which still reach the remote session; Ctrl alone is harmless there
-    // and Windows apps rarely use Ctrl+\.
+    // DECISION: Ctrl+Semicolon by default. The hotkey consumes its key but not its
+    // modifiers, which still reach the remote session; Ctrl alone is harmless there.
+    // Windows apps rarely bind Ctrl+;, and unlike Ctrl+\ it is not tmux's prefix or
+    // SIGQUIT in terminals - the remote sessions this app types into. The semicolon
+    // key also sits at the same home-row position on nearly every layout.
     static Shortcut standard();
 
     bool operator==(const Shortcut& other) const { return vk == other.vk && modifiers == other.modifiers; }

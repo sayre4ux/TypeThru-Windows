@@ -63,7 +63,7 @@ Run `scripts\test.cmd` after every code change and `scripts\check.cmd` before a 
 
 ## Architecture
 
-**Trigger.** RegisterHotKey (Ctrl+\ = VK_OEM_5 + MOD_CONTROL, `MOD_NOREPEAT`) fires
+**Trigger.** RegisterHotKey (Ctrl+; = VK_OEM_1 + MOD_CONTROL, `MOD_NOREPEAT`) fires
 WM_HOTKEY on key-down; the run then waits for all modifiers and the key itself to be
 released before typing (the remote client receives the physical key-up sequence first).
 The panel's "Type Clipboard" waits 1 s (tests 3 s) for the user to click the target

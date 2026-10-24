@@ -13,7 +13,7 @@ The Windows edition of [TypeThru for macOS](https://github.com/sayre4ux/TypeThru
 - **New lines, not sends**: line breaks are typed as Shift+Enter, and a line break at the
   end is left out, so a copied command never runs by itself.
 - **Stops instantly** when you press Esc, click, or switch windows.
-- **Your shortcut**: Ctrl+\ by default, or choose your own.
+- **Your shortcut**: Ctrl+; by default, or choose your own.
 - **Lightweight**: a single 1 MB executable, no runtime dependencies, no background services.
 - **Privacy**: the clipboard is read once when you trigger typing and never written
   anywhere. No logging, no telemetry. The only network request is the daily update
@@ -46,7 +46,7 @@ optional start-at-sign-in entry (per-user only; no admin needed).
 1. Open TypeThru. Its icon sits in the notification area.
 2. Copy the text you want to send.
 3. Click into the text field in your remote session.
-4. Press **Ctrl+\** (or click the TypeThru icon → **Type Clipboard**).
+4. Press **Ctrl+;** (or click the TypeThru icon → **Type Clipboard**).
 
 Keep the keyboard layout on this PC and in the remote session the same, as with a real
 keyboard. TypeThru cannot type into windows that run elevated (as administrator) unless
