@@ -26,8 +26,12 @@ powershell -NoProfile -Command "Compress-Archive -Path '.build\release\TypeThru\
 
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\sign-update.ps1 ".build\release\TypeThru-%VERSION%-win64.zip" || exit /b 1
 
-set ISCC=%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe
-if exist "%ISCC%" (
+rem Inno Setup 7 (64-bit and 32-bit editions) and 6 are all supported.
+set ISCC=
+for %%p in ("%ProgramFiles%\Inno Setup 7\ISCC.exe" "%ProgramFiles(x86)%\Inno Setup 7\ISCC.exe" "%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe") do (
+    if not defined ISCC if exist %%p set ISCC=%%~p
+)
+if defined ISCC (
     powershell -NoProfile -Command "Set-Content -Encoding ascii installer\version.ini '[TypeThru]`nVersion=%VERSION%'"
     "%ISCC%" installer\typethru.iss >nul || exit /b 1
     del installer\version.ini
