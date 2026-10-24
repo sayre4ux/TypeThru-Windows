@@ -76,6 +76,24 @@ static INPUT keyInput(Method method, UINT vk, UINT scan, bool extended, bool up)
     return input;
 }
 
+// Bare key-ups for every modifier. Escaping a full-screen VDI session with a
+// chord (Ctrl+Alt) does not forward the key-ups, so the guest keeps believing
+// Ctrl/Alt is held and every letter we send becomes a shortcut that never lands
+// (seen live in Teams: only capitals and punctuation survived). A key-up with no
+// matching down is ignored by local apps, so this is safe to always send.
+static void releasePhantomModifiers() {
+    INPUT input{};
+    input.type = INPUT_KEYBOARD;
+    input.ki.dwFlags = KEYEVENTF_KEYUP;
+    const UINT modifiers[8] = {VK_LCONTROL, VK_RCONTROL, VK_LMENU, VK_RMENU,
+                               VK_LSHIFT, VK_RSHIFT, VK_LWIN, VK_RWIN};
+    for (UINT vk : modifiers) {
+        input.ki.wVk = static_cast<WORD>(vk);
+        SendInput(1, &input, sizeof(INPUT));
+    }
+    Sleep(50);
+}
+
 std::vector<Typer::Step> Typer::stepsFor(wchar_t ch, const KeyMap& map, Method method,
                                          int holdMs, int gapMs) {
     std::vector<Step> steps;
@@ -110,9 +128,10 @@ std::vector<Typer::Step> Typer::stepsFor(wchar_t ch, const KeyMap& map, Method m
 TypeResult Typer::type(const std::wstring& text, const KeyMap& map, double intervalSeconds,
                        Method method, StopWatcher& watcher) {
     TimerResolution timer(true);
-    // DECISION: a 150 ms warm-up before the first key. Remote input pipelines drop
-    // the opening burst while the target is still settling after taking focus.
+    // DECISION: a 150 ms warm-up before the first key, and phantom modifiers
+    // cleared first - both because the target may still be settling.
     Sleep(150);
+    releasePhantomModifiers();
     int holdMs = 0, gapMs = 0;
     timing(intervalSeconds, holdMs, gapMs);
     HWND target = GetForegroundWindow();

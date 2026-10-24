@@ -904,7 +904,8 @@ void showDiagnostics() {
         elevatedNote = L"\n\nThe current front window is elevated (run as administrator). "
                        L"TypeThru cannot type into elevated windows unless TypeThru itself is elevated.";
     }
-    std::wstring text = std::wstring(L"Shortcut: ") + g_settings.shortcut.title()
+    std::wstring text = std::wstring(L"Version: ") + TYPETHRU_VERSION_STRING
+        + L"\nShortcut: " + g_settings.shortcut.title()
         + (g_hotkeyRegistered ? L", registered" : L", NOT registered")
         + L"\nLast shortcut received: " + lastHotKey
         + L"\nSelected method: " + utf8(methodShortTitle(g_settings.method))
