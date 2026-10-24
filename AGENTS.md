@@ -86,9 +86,11 @@ Before the first key: a 150 ms warm-up, and the foreground window must have been
 the same window for 300 ms (bounded at 2 s, `settledForegroundWindow`) - releasing
 a full-screen client's keyboard grab (Ctrl+Alt) leaves focus flickering and keys
 sent into the transition get dropped (seen live twice: lowercase letters AND digits vanished in
-Teams while capitals and punctuation survived - the signature of a phantom Alt,
-whose menu accelerators eat letters and digits but not punctuation. Orphan
-key-ups are NOT forwarded in that state; real press-release pairs are). Per character: key down → hold (80 ms or half the interval, `tt::timing`) → key up →
+Teams while capitals and punctuation survived. Neither orphan key-ups nor real
+Ctrl+Alt+Shift press-release pairs cured it, and the pairs regressed every
+trigger path including the T button into Notepad - the client reads the rapid
+chord as the start of another escape and eats the plain letters after it. No
+modifier clearing is sent; the T button is the full-screen answer). Per character: key down → hold (80 ms or half the interval, `tt::timing`) → key up →
 gap. Shifted characters add a left-Shift press/release with a 20 ms margin. Line breaks
 settle for 300 ms because remote apps can reorder them. `TimerResolution` raises the
 timer to 1 ms while typing. The whole text is checked against the layout before

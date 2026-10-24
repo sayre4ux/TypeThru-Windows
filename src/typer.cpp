@@ -79,28 +79,14 @@ static INPUT keyInput(Method method, UINT vk, UINT scan, bool extended, bool up)
 // A real press-and-release pair for Ctrl, Shift, and Alt, in scan codes like the
 // typing itself. Escaping a full-screen VDI session with the Ctrl+Alt chord never
 // forwards the key-ups, so the guest keeps a phantom Alt held and every letter
-// (menu accelerator) and digit (silent) is eaten while punctuation still lands -
-// seen live in Teams twice. Orphan key-ups are not forwarded by the client in the
-// un-grabbed state, so a full pair is required to reset the guest. The three are
-// pressed together and released together: Ctrl+Alt+Shift alone does nothing.
-// Win is left alone on purpose - a lone Win press opens the Start menu.
-static void releasePhantomModifiers() {
-    struct Modifier { UINT vk; UINT scan; };
-    const Modifier modifiers[3] = {{VK_LCONTROL, 0x1D}, {VK_LSHIFT, 0x2A}, {VK_LMENU, 0x38}};
-    INPUT batch[6] = {};
-    for (int i = 0; i < 3; i++) {
-        batch[i].type = INPUT_KEYBOARD;
-        batch[i].ki.wVk = static_cast<WORD>(modifiers[i].vk);
-        batch[i].ki.wScan = static_cast<WORD>(modifiers[i].scan);
-        batch[i].ki.dwFlags = KEYEVENTF_SCANCODE;
-        batch[5 - i].type = INPUT_KEYBOARD;
-        batch[5 - i].ki.wVk = static_cast<WORD>(modifiers[i].vk);
-        batch[5 - i].ki.wScan = static_cast<WORD>(modifiers[i].scan);
-        batch[5 - i].ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP;
-    }
-    SendInput(6, batch, sizeof(INPUT));
-    Sleep(60);
-}
+// (menu accelerator) and digit (silent) is eaten while punctuation still lands.
+// DECISION: not sent. Both the orphan key-up clear and these real pairs failed to
+// fix the escaped-hotkey path, and the pairs actively broke the working paths:
+// the client treats the rapid Ctrl+Alt+Shift chord as the start of another escape
+// and swallows the plain letters that follow (seen live: Teams and Notepad, every
+// trigger). The T button is the full-screen answer; see README.
+
+static INPUT keyInputPlaceholder() { return INPUT{}; }
 
 std::vector<Typer::Step> Typer::stepsFor(wchar_t ch, const KeyMap& map, Method method,
                                          int holdMs, int gapMs) {
@@ -136,10 +122,9 @@ std::vector<Typer::Step> Typer::stepsFor(wchar_t ch, const KeyMap& map, Method m
 TypeResult Typer::type(const std::wstring& text, const KeyMap& map, double intervalSeconds,
                        Method method, StopWatcher& watcher) {
     TimerResolution timer(true);
-    // DECISION: a 150 ms warm-up before the first key, and phantom modifiers
-    // cleared first - both because the target may still be settling.
+    // DECISION: a 150 ms warm-up before the first key - the target may still be
+    // settling after taking focus. No modifier clearing: see the note above.
     Sleep(150);
-    releasePhantomModifiers();
     int holdMs = 0, gapMs = 0;
     timing(intervalSeconds, holdMs, gapMs);
     HWND target = GetForegroundWindow();
