@@ -76,22 +76,30 @@ static INPUT keyInput(Method method, UINT vk, UINT scan, bool extended, bool up)
     return input;
 }
 
-// Bare key-ups for every modifier. Escaping a full-screen VDI session with a
-// chord (Ctrl+Alt) does not forward the key-ups, so the guest keeps believing
-// Ctrl/Alt is held and every letter we send becomes a shortcut that never lands
-// (seen live in Teams: only capitals and punctuation survived). A key-up with no
-// matching down is ignored by local apps, so this is safe to always send.
+// A real press-and-release pair for Ctrl, Shift, and Alt, in scan codes like the
+// typing itself. Escaping a full-screen VDI session with the Ctrl+Alt chord never
+// forwards the key-ups, so the guest keeps a phantom Alt held and every letter
+// (menu accelerator) and digit (silent) is eaten while punctuation still lands -
+// seen live in Teams twice. Orphan key-ups are not forwarded by the client in the
+// un-grabbed state, so a full pair is required to reset the guest. The three are
+// pressed together and released together: Ctrl+Alt+Shift alone does nothing.
+// Win is left alone on purpose - a lone Win press opens the Start menu.
 static void releasePhantomModifiers() {
-    INPUT input{};
-    input.type = INPUT_KEYBOARD;
-    input.ki.dwFlags = KEYEVENTF_KEYUP;
-    const UINT modifiers[8] = {VK_LCONTROL, VK_RCONTROL, VK_LMENU, VK_RMENU,
-                               VK_LSHIFT, VK_RSHIFT, VK_LWIN, VK_RWIN};
-    for (UINT vk : modifiers) {
-        input.ki.wVk = static_cast<WORD>(vk);
-        SendInput(1, &input, sizeof(INPUT));
+    struct Modifier { UINT vk; UINT scan; };
+    const Modifier modifiers[3] = {{VK_LCONTROL, 0x1D}, {VK_LSHIFT, 0x2A}, {VK_LMENU, 0x38}};
+    INPUT batch[6] = {};
+    for (int i = 0; i < 3; i++) {
+        batch[i].type = INPUT_KEYBOARD;
+        batch[i].ki.wVk = static_cast<WORD>(modifiers[i].vk);
+        batch[i].ki.wScan = static_cast<WORD>(modifiers[i].scan);
+        batch[i].ki.dwFlags = KEYEVENTF_SCANCODE;
+        batch[5 - i].type = INPUT_KEYBOARD;
+        batch[5 - i].ki.wVk = static_cast<WORD>(modifiers[i].vk);
+        batch[5 - i].ki.wScan = static_cast<WORD>(modifiers[i].scan);
+        batch[5 - i].ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP;
     }
-    Sleep(50);
+    SendInput(6, batch, sizeof(INPUT));
+    Sleep(60);
 }
 
 std::vector<Typer::Step> Typer::stepsFor(wchar_t ch, const KeyMap& map, Method method,

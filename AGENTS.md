@@ -85,8 +85,10 @@ TypeThru itself is refused.
 Before the first key: a 150 ms warm-up, and the foreground window must have been
 the same window for 300 ms (bounded at 2 s, `settledForegroundWindow`) - releasing
 a full-screen client's keyboard grab (Ctrl+Alt) leaves focus flickering and keys
-sent into the transition get dropped (seen live: lowercase letters vanished in
-Teams while capitals and punctuation survived). Per character: key down → hold (80 ms or half the interval, `tt::timing`) → key up →
+sent into the transition get dropped (seen live twice: lowercase letters AND digits vanished in
+Teams while capitals and punctuation survived - the signature of a phantom Alt,
+whose menu accelerators eat letters and digits but not punctuation. Orphan
+key-ups are NOT forwarded in that state; real press-release pairs are). Per character: key down → hold (80 ms or half the interval, `tt::timing`) → key up →
 gap. Shifted characters add a left-Shift press/release with a 20 ms margin. Line breaks
 settle for 300 ms because remote apps can reorder them. `TimerResolution` raises the
 timer to 1 ms while typing. The whole text is checked against the layout before
