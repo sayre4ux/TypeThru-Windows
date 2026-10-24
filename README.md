@@ -78,7 +78,9 @@ Run it, click the remote session's text field, wait for the countdown.
 
 - The clipboard is read once, in memory, when you start typing. It is never saved,
   logged, or sent anywhere.
-- TypeThru sends key presses; it does not listen to the keyboard or the mouse.
+- TypeThru sends key presses; it does not listen to the keyboard. While the panel
+  is open, a click watcher closes it when you click elsewhere; it sees only click
+  positions during those seconds and is removed as soon as the panel closes.
 - The update check contacts `api.github.com` at most once a day and can be turned off
   in Settings. An update is downloaded and installed only when you choose **Install**,
   and only if it carries this project's signature.

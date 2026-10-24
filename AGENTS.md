@@ -119,7 +119,10 @@ uninstall. Diagnostics mirror the macOS fields; nothing records clipboard conten
   session (Alt opens menus, Win opens Start). Same reasoning as macOS; the Settings
   caution text mirrors it.
 - **The README's Privacy section is a contract**: clipboard read once in memory, no
-  logging, no input listening, network only for the update check. If a change would
+  logging, no keyboard listening, network only for the update check. The one mouse
+  touch is a WH_MOUSE_LL click watcher that exists only while the panel is visible
+  (it closes the panel on an outside click, because the panel is NOACTIVATE and so
+  gets no focus message); it sees click positions only and unhooks on close. If a change would
   break any of these, stop and ask. If a change alters what the app can see or do,
   update that section in the same change.
 - **Signing**: releases may be unsigned or self-signed for now; SmartScreen shows

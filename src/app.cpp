@@ -390,6 +390,37 @@ void syncPanel() {
     InvalidateRect(g_panel, nullptr, TRUE);
 }
 
+// The panel closes when the user clicks anywhere outside it, like the macOS panel.
+// The panel is WS_EX_NOACTIVATE (the remote client must keep focus), so no focus or
+// activation message ever reaches it; instead a WH_MOUSE_LL hook runs only while the
+// panel is visible, sees nothing but click positions, and is removed on close.
+HHOOK g_panelClickHook = nullptr;
+DWORD g_panelClosedAt = 0;
+
+constexpr UINT WM_APP_CLOSEPANEL = WM_APP + 5;
+
+static bool windowBelongsToPanel(HWND window) {
+    // Walk the parent chain to the root, then any owner chain (combo dropdown lists
+    // are top-level windows owned by controls inside the panel).
+    for (HWND root = window; root; ) {
+        if (root == g_panel) return true;
+        HWND owner = GetWindow(root, GW_OWNER);
+        root = owner ? GetAncestor(owner, GA_ROOT) : nullptr;
+    }
+    return false;
+}
+
+static LRESULT CALLBACK panelClickHook(int code, WPARAM wParam, LPARAM lParam) {
+    if (code == HC_ACTION
+        && (wParam == WM_LBUTTONDOWN || wParam == WM_RBUTTONDOWN || wParam == WM_MBUTTONDOWN)) {
+        POINT point = reinterpret_cast<MSLLHOOKSTRUCT*>(lParam)->pt;
+        if (!windowBelongsToPanel(WindowFromPoint(point))) {
+            PostMessageW(g_window, WM_APP_CLOSEPANEL, 0, 0);
+        }
+    }
+    return CallNextHookEx(nullptr, code, wParam, lParam);
+}
+
 void showPanel() {
     if (!g_panel) {
         g_panel = CreateWindowExW(WS_EX_NOACTIVATE | WS_EX_TOPMOST | WS_EX_TOOLWINDOW,
@@ -410,10 +441,18 @@ void showPanel() {
     SetWindowPos(g_panel, HWND_TOPMOST, x, y, width, height, SWP_SHOWWINDOW);
     // The panel never takes focus, so the remote client stays in front and ready.
     InvalidateRect(g_panel, nullptr, TRUE);
+    if (!g_panelClickHook) g_panelClickHook = SetWindowsHookExW(WH_MOUSE_LL, panelClickHook, nullptr, 0);
 }
 
 void closePanel() {
     if (g_panel) ShowWindow(g_panel, SW_HIDE);
+    // A click on the tray icon also lands outside the panel; remember when we closed
+    // so the tray message does not immediately reopen it (same guard as macOS).
+    g_panelClosedAt = GetTickCount();
+    if (g_panelClickHook) {
+        UnhookWindowsHookEx(g_panelClickHook);
+        g_panelClickHook = nullptr;
+    }
 }
 
 LRESULT CALLBACK panelProc(HWND panel, UINT message, WPARAM wParam, LPARAM lParam) {
@@ -459,28 +498,6 @@ LRESULT CALLBACK panelProc(HWND panel, UINT message, WPARAM wParam, LPARAM lPara
             layoutPanel(panel);
             return 0;
         }
-        case WM_SHOWWINDOW: {
-            if (wParam) {
-                TRACKMOUSEEVENT track{sizeof(track), TME_LEAVE, panel, 0};
-                TrackMouseEvent(&track);
-            }
-            return 0;
-        }
-        case WM_MOUSELEAVE: {
-            // DECISION: close on mouse leave, like the macOS panel closing when clicked
-            // elsewhere. WM_MOUSELEAVE also fires when the cursor moves onto a child
-            // control, so only close when the point is truly outside this panel.
-            POINT cursor = {};
-            GetCursorPos(&cursor);
-            HWND hovered = WindowFromPoint(cursor);
-            if (!hovered || GetAncestor(hovered, GA_ROOT) != panel) {
-                closePanel();
-            } else {
-                TRACKMOUSEEVENT track{sizeof(track), TME_LEAVE, panel, 0};
-                TrackMouseEvent(&track);
-            }
-            return 0;
-        }
         case WM_COMMAND: {
             WORD id = LOWORD(wParam);
             WORD code = HIWORD(wParam);
@@ -511,6 +528,7 @@ LRESULT CALLBACK panelProc(HWND panel, UINT message, WPARAM wParam, LPARAM lPara
                 closePanel();
                 showSettingsWindow();
             } else if (id == IDC_DIAGNOSTICS && code == BN_CLICKED) {
+                closePanel();
                 showDiagnostics();
             } else if (id == IDC_INSTALL && code == BN_CLICKED) {
                 installUpdate();
@@ -747,9 +765,13 @@ LRESULT CALLBACK windowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
             trigger(false, nullptr);
             return 0;
         }
+        case WM_APP_CLOSEPANEL:
+            closePanel();
+            return 0;
         case WM_APP_TRAY: {
             if (lParam == WM_LBUTTONUP || lParam == WM_RBUTTONUP || lParam == WM_LBUTTONDBLCLK) {
-                if (IsWindowVisible(g_panel)) {
+                bool justClosed = GetTickCount() - g_panelClosedAt < 300;
+                if (IsWindowVisible(g_panel) || justClosed) {
                     closePanel();
                 } else {
                     showPanel();
