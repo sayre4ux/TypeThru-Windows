@@ -53,10 +53,12 @@ optional start-at-sign-in entry (per-user only; no admin needed).
 4. Press **Ctrl+;**, or - in a full-screen session where the keyboard belongs to the
    remote desktop - click the **T** button first, then click the text field.
 
-Full-screen sessions: some clients give your PC the keyboard back when you press
-Ctrl+Alt. If you use that, click the text field inside the session once before
-pressing Ctrl+; - the mouse always works - so the session has settled when the
-text starts. The T button needs none of this.
+Full-screen sessions: keep using the T button. Some clients give your PC the
+keyboard back when you press Ctrl+Alt, and the shortcut then fires - but on some
+of them the session drops the plain letters the shortcut path sends (keys typed
+with Shift or punctuation get through; letters and digits vanish). If you try
+the escape trick and a message comes out gutted, use the T button instead: it
+never touches the chord and types cleanly.
 
 Heavy apps (browsers, Teams) over a remote link can drop keys at the two fastest
 speeds; use them in editors, and keep the average speed for anything critical.
