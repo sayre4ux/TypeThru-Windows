@@ -10,6 +10,9 @@ debug*.log
 # The update signing key's private export stays local
 update-key-private.txt
 
+# Local development log; never publish
+/DEVLOG.md
+
 # Editors and OS
 .vs/
 .vscode/

@@ -8,6 +8,38 @@ TypeThru for Windows is the Windows edition of TypeThru for macOS
 VDI and remote desktop sessions where paste does not work. It is small (C++17, pure
 Win32, no package manager, no project file); `scripts\build.cmd` builds everything.
 
+## Bootstrap
+
+1. Read this file end to end, then `DEVLOG.md` (git-ignored local log) for the
+   session history and current state - its top entry is the most recent truth.
+2. Run `scripts\check.cmd` (tests + clean build) before touching anything, so
+   you start from a known-good state.
+3. Hard rules, unchanged: never post real keyboard input (`--type`, the POC with
+   text, panel typing actions), never run installers/uninstallers, never commit
+   keys or the DEVLOG.
+4. The owner runs everything that needs a real screen: panel interactions,
+   remote-session tests, setup and uninstall. When a change affects those, list
+   the exact manual steps instead of claiming they work.
+5. Optional second opinion: an external reviewer CLI may be installed. If used,
+   run it single-shot with read-only tool permissions, and remember it cannot
+   post approvals in headless mode - give it everything it needs to read.
+
+## Live session findings (a real VDI, keep this true)
+
+These were established experimentally against a Horizon client with a Windows
+guest; do not regress them and do not re-litigate them without new evidence:
+
+- Scan-code SendInput reaches the guest at 20 ms per key with zero drops
+  (Notepad); Esc and click-stop work through the grab.
+- Full-screen keyboard grab consumes every chord before RegisterHotKey, so the
+  floating T button is the only trigger guaranteed to work there.
+- The Ctrl+Alt escape poisons the session: everything typed afterwards (any
+  trigger path) loses its letters and digits while capitals and punctuation
+  survive - a phantom Alt in the guest that no external input could clear
+  (orphan key-ups are not forwarded; real Ctrl+Alt+Shift pairs make it worse).
+  Recovery is letting the session take the keyboard back. Never send modifier
+  chords to "fix" input; see DEVLOG 2026-10-24 for the full experiment log.
+
 ## Layout
 
 | Path | Role |
