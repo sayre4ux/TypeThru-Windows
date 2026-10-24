@@ -175,6 +175,21 @@ void setBusy(bool busy) {
     }
 }
 
+// Waits until the foreground window has been the same window for 300 ms, up to
+// 2 s. Releasing a full-screen VDI client's keyboard grab (the Ctrl+Alt escape)
+// leaves focus flickering through a transition, and keys sent into it are dropped.
+static HWND settledForegroundWindow() {
+    HWND stable = GetForegroundWindow();
+    int sameFor = 0;
+    for (int i = 0; i < 20 && sameFor < 3; i++) {
+        Sleep(100);
+        HWND now = GetForegroundWindow();
+        if (now == stable) sameFor++;
+        else { stable = now; sameFor = 0; }
+    }
+    return stable;
+}
+
 // The typing run: everything after the checks in trigger() happens off the UI thread.
 void runTyping(std::wstring text, KeyMap map, double interval, Method method,
                bool fromMenu, int settleBeforeMs, UINT triggerVk) {
@@ -191,7 +206,7 @@ void runTyping(std::wstring text, KeyMap map, double interval, Method method,
             done->result.total = static_cast<int>(text.size());
             done->result.reason = L"shortcut or modifier keys were not released";
         } else {
-            HWND target = GetForegroundWindow();
+            HWND target = settledForegroundWindow();
             DWORD pid = 0;
             GetWindowThreadProcessId(target, &pid);
             if (!target || pid == GetCurrentProcessId()) {

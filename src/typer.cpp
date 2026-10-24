@@ -110,6 +110,9 @@ std::vector<Typer::Step> Typer::stepsFor(wchar_t ch, const KeyMap& map, Method m
 TypeResult Typer::type(const std::wstring& text, const KeyMap& map, double intervalSeconds,
                        Method method, StopWatcher& watcher) {
     TimerResolution timer(true);
+    // DECISION: a 150 ms warm-up before the first key. Remote input pipelines drop
+    // the opening burst while the target is still settling after taking focus.
+    Sleep(150);
     int holdMs = 0, gapMs = 0;
     timing(intervalSeconds, holdMs, gapMs);
     HWND target = GetForegroundWindow();

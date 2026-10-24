@@ -53,6 +53,14 @@ optional start-at-sign-in entry (per-user only; no admin needed).
 4. Press **Ctrl+;**, or - in a full-screen session where the keyboard belongs to the
    remote desktop - click the **T** button first, then click the text field.
 
+Full-screen sessions: some clients give your PC the keyboard back when you press
+Ctrl+Alt. If you use that, click the text field inside the session once before
+pressing Ctrl+; - the mouse always works - so the session has settled when the
+text starts. The T button needs none of this.
+
+Heavy apps (browsers, Teams) over a remote link can drop keys at the two fastest
+speeds; use them in editors, and keep the average speed for anything critical.
+
 Keep the keyboard layout on this PC and in the remote session the same, as with a real
 keyboard. TypeThru cannot type into windows that run elevated (as administrator) unless
 TypeThru itself is elevated.
