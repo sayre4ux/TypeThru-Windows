@@ -402,12 +402,14 @@ HHOOK g_panelClickHook = nullptr;
 DWORD g_panelClosedAt = 0;
 
 static bool windowBelongsToPanel(HWND window) {
-    // Walk the parent chain to the root, then any owner chain (combo dropdown lists
-    // are top-level windows owned by controls inside the panel).
-    for (HWND root = window; root; ) {
-        if (root == g_panel) return true;
-        HWND owner = GetWindow(root, GW_OWNER);
-        root = owner ? GetAncestor(owner, GA_ROOT) : nullptr;
+    if (!window) return false;
+    // Children (buttons, combos) root to the panel through the parent chain.
+    HWND root = GetAncestor(window, GA_ROOT);
+    if (root == g_panel) return true;
+    // Combo dropdown lists are top-level windows owned by controls in the panel;
+    // follow owner links and re-root each one.
+    for (HWND owner = GetWindow(root, GW_OWNER); owner; owner = GetWindow(owner, GW_OWNER)) {
+        if (owner == g_panel || GetAncestor(owner, GA_ROOT) == g_panel) return true;
     }
     return false;
 }
