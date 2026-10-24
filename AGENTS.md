@@ -90,7 +90,10 @@ Teams while capitals and punctuation survived. Neither orphan key-ups nor real
 Ctrl+Alt+Shift press-release pairs cured it, and the pairs regressed every
 trigger path including the T button into Notepad - the client reads the rapid
 chord as the start of another escape and eats the plain letters after it. No
-modifier clearing is sent; the T button is the full-screen answer). Per character: key down → hold (80 ms or half the interval, `tt::timing`) → key up →
+modifier clearing is sent; the T button is the full-screen answer. Final live
+experiment: the T button after a Ctrl+Alt escape garbles identically, so the
+chord poisons the session state itself - path-independent, unfixable from
+outside; recovery is letting the session take the keyboard back). Per character: key down → hold (80 ms or half the interval, `tt::timing`) → key up →
 gap. Shifted characters add a left-Shift press/release with a 20 ms margin. Line breaks
 settle for 300 ms because remote apps can reorder them. `TimerResolution` raises the
 timer to 1 ms while typing. The whole text is checked against the layout before

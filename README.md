@@ -54,11 +54,12 @@ optional start-at-sign-in entry (per-user only; no admin needed).
    remote desktop - click the **T** button first, then click the text field.
 
 Full-screen sessions: keep using the T button. Some clients give your PC the
-keyboard back when you press Ctrl+Alt, and the shortcut then fires - but on some
-of them the session drops the plain letters the shortcut path sends (keys typed
-with Shift or punctuation get through; letters and digits vanish). If you try
-the escape trick and a message comes out gutted, use the T button instead: it
-never touches the chord and types cleanly.
+keyboard back when you press Ctrl+Alt - avoid it. On some clients the escape
+leaves the session believing Alt is still held, and everything typed afterwards
+comes out gutted (letters and digits vanish; capitals and punctuation get
+through), no matter how it is triggered. If that happens, click back into the
+session (or leave and re-enter full screen) so it takes the keyboard again, then
+use the T button.
 
 Heavy apps (browsers, Teams) over a remote link can drop keys at the two fastest
 speeds; use them in editors, and keep the average speed for anything critical.
