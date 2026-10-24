@@ -1,0 +1,147 @@
+# AGENTS.md
+
+Guidance for AI coding agents working on TypeThru for Windows. Read this before
+changing code.
+
+TypeThru for Windows is the Windows edition of TypeThru for macOS
+(github.com/sayre4ux/TypeThru). It types the clipboard as scan-code key presses into
+VDI and remote desktop sessions where paste does not work. It is small (C++17, pure
+Win32, no package manager, no project file); `scripts\build.cmd` builds everything.
+
+## Layout
+
+| Path | Role |
+|---|---|
+| `scripts/build.cmd` | Entry point: `app`, `poc`, `tests`, or `all` into `.build\` |
+| `scripts/test.cmd` | Runs `Tests.exe` |
+| `scripts/check.cmd` | Tests + a clean build; run before every push |
+| `scripts/package.cmd` | Release zip, update signature, installer (needs Inno Setup 6) |
+| `scripts/make-key.ps1` | Once per signer: the CNG key that signs updates; writes `src/updatekey.h` |
+| `scripts/sign-update.ps1` | Signs a package into `<file>.sig` (base64 raw ECDSA) |
+| `src/main.cpp` | Entry point, CLI modes (`--print-map`, `--type`, `--version`, `--finalize-update`) |
+| `src/app.cpp` | Tray icon, panel, Settings window, trigger flow, update UI, diagnostics |
+| `src/typer.cpp/.h` | The typing engine: four methods, per-character input construction |
+| `src/keymap.cpp/.h` | Character → (VK, scan code, Shift) table built from the active layout |
+| `src/stopwatcher.cpp/.h` | Esc / click / window-change stop detection on its own thread |
+| `src/hotkey.cpp/.h` | Shortcut rules and names (RegisterHotKey is driven from app.cpp) |
+| `src/settings.cpp/.h` | HKCU settings store, Run-key login entry, clipboard read |
+| `src/shared.cpp/.h` | Logic shared with the macOS app: symbol table, speeds, tests, versions |
+| `src/updates.cpp/.h` | GitHub release check, JSON parsing, ECDSA/CNG verify, install |
+| `src/updatekey.h` | The update public key; generated, never edited by hand |
+| `tools/poc.cpp` | Standalone POC for checking a remote session before installing |
+| `tests/tests.cpp` | Unit tests; constructs inputs and inspects them, never posts |
+| `installer/typethru.iss` | Inno Setup script (per-user install, no admin) |
+| `res/` | Icon, manifest, version resource |
+| `.github/workflows/` | CI (build + tests) and CodeQL |
+
+## Commands
+
+```bat
+scripts\build.cmd all          :: build TypeThru.exe, TypeThruPOC.exe, Tests.exe
+.build\Tests.exe               :: unit tests; posts no input
+scripts\check.cmd              :: everything required before a push
+.build\TypeThru.exe --print-map "text"    :: keys a text would use; types nothing
+.build\TypeThru.exe --version
+```
+
+Run `scripts\test.cmd` after every code change and `scripts\check.cmd` before a push.
+
+## What an agent must not do
+
+- **Never post real keyboard input.** Do not run `--type`, `TypeThruPOC.exe` with text,
+  or any UI action that triggers typing. Unit tests construct and inspect INPUT structs;
+  they never call SendInput. `--print-map` and `--version` are safe.
+- **Never run the installer or uninstaller**, or delete registry keys outside a test.
+  Both change the user's system state.
+- **Never commit the update private key** (`.build/update-key-private.txt` is
+  git-ignored) or any certificate material.
+- **Keep the shared tables in sync with the macOS app.** The symbol replacement table,
+  the five speeds, the typing-test texts, and the trailing-line-break rule exist on both
+  platforms; a change here belongs in the same change there (Sources/main.swift).
+- Do not name specific VDI or remote desktop vendors in the UI, README, or code
+  comments. Say "VDI and remote desktops".
+
+## Architecture
+
+**Trigger.** RegisterHotKey (Ctrl+\ = VK_OEM_5 + MOD_CONTROL, `MOD_NOREPEAT`) fires
+WM_HOTKEY on key-down; the run then waits for all modifiers and the key itself to be
+released before typing (the remote client receives the physical key-up sequence first).
+The panel's "Type Clipboard" waits 1 s (tests 3 s) for the user to click the target
+field. The target is the foreground window captured just before typing; typing into
+TypeThru itself is refused.
+
+**Typing** (src/typer.cpp) has four methods, in order of preference:
+1. **Scancode** — SendInput with KEYEVENTF_SCANCODE (+ EXTENDEDKEY where needed): what
+   remote clients accept, because scan codes look like the physical keyboard. Default.
+2. **Virtual key** — SendInput by VK only, for diagnosis.
+3. **Unicode** — KEYEVENTF_UNICODE UTF-16 units; Enter/Tab stay physical keys.
+4. **PostWindow** — WM_KEYDOWN/WM_CHAR posted to the target window; diagnostic only.
+
+Per character: key down → hold (80 ms or half the interval, `tt::timing`) → key up →
+gap. Shifted characters add a left-Shift press/release with a 20 ms margin. Line breaks
+settle for 300 ms because remote apps can reorder them. `TimerResolution` raises the
+timer to 1 ms while typing. The whole text is checked against the layout before
+anything is sent; unsupported characters abort the run. Line breaks at the end are
+dropped (`withoutTrailingLineBreaks`) and newlines are typed as Shift+Enter by default
+(`Typer::shiftReturn`).
+
+**Key map** (src/keymap.cpp) walks VK 0x20–0xFE twice (unshifted first, so "8" wins
+over "*"), maps through ToUnicodeEx with dead-key protection, and skips keypad and
+control keys (see `isControlKey`; getting those ranges wrong once emptied the whole
+map). `MAPVK_VK_TO_VSC_EX` supplies scan codes; the 0x100 bit marks extended keys.
+
+**Stop** (src/stopwatcher.cpp): a thread polls every 10 ms — Esc down, any mouse button
+newly down (buttons already down at start don't count), or the foreground window
+changing. There is no accessibility permission on Windows; nothing to request.
+
+**Updates** (src/updates.cpp): daily GitHub releases check (at most; off in Settings).
+Trust requires ALL of: the page/file is this repo's github.com URL, the zip's ECDSA
+P-256 signature verifies against `updateKeyBlob` (CNG; the private key is a CNG user
+key "TypeThru-Update" created by make-key.ps1), and the version is newer. Install =
+extract with tar.exe → run the new exe with `--finalize-update` → it waits for the old
+one to exit, replaces it, and relaunches. Settings live in HKCU\Software\TypeThru and
+survive updates.
+
+**UI** (src/app.cpp): tray icon → panel (WS_EX_NOACTIVATE, so the remote client keeps
+focus) with method/speed/tests; Settings window with shortcut recording (hotkey
+unregistered while recording), start-at-sign-in (HKCU Run key), update toggle,
+uninstall. Diagnostics mirror the macOS fields; nothing records clipboard contents.
+
+## Design rules and why
+
+- **No admin, no driver, no permission prompts.** SendInput at scan-code level is
+  indistinguishable enough for VDI clients; this is the whole reason the Windows
+  edition needs no setup. Revisit only with evidence from a real session.
+- **UIPI**: a non-elevated TypeThru cannot type into elevated windows. Diagnostics
+  reports this when the front window is elevated; the README says to run TypeThru
+  elevated in that case. Do not "fix" by requesting admin by default.
+- **Ctrl-only shortcuts are safest**: Alt, Win, and Shift pass through to the remote
+  session (Alt opens menus, Win opens Start). Same reasoning as macOS; the Settings
+  caution text mirrors it.
+- **The README's Privacy section is a contract**: clipboard read once in memory, no
+  logging, no input listening, network only for the update check. If a change would
+  break any of these, stop and ask. If a change alters what the app can see or do,
+  update that section in the same change.
+- **Signing**: releases may be unsigned or self-signed for now; SmartScreen shows
+  "Run anyway". Windows does not tie permissions to the signature, so switching to an
+  OV certificate later breaks nothing for users. The update channel is protected by
+  the Ed25519-equivalent CNG key regardless.
+
+## Release checklist
+
+1. Bump the version in `src/version.h` (all four defines).
+2. `scripts\check.cmd`; then `scripts\package.cmd` (needs the TypeThru-Update CNG key;
+   it writes the zip, the `.sig`, and the installer when Inno Setup 6 is installed).
+3. Test the zip on a clean account: run, tray panel, shortcut, typing tests into
+   Notepad, Settings, Check Now, uninstall. Then the same inside the real remote
+   session (only the user can do this).
+4. Publish a GitHub pre-release with the zip, its `.sig`, the installer, and the zip's
+   SHA-256 in the notes. Without the `.sig`, the app offers no Install for that release.
+5. From the previous version, choose Install: it must update, reopen, and keep settings.
+
+## Style
+
+- Match the existing code: compact, few comments, comments explain why rather than what.
+- Mark judgment calls with `// DECISION:` and a one-line reason.
+- User-facing text is plain and short and tells the user the next step.
+- `/W4` clean: no warnings on any target.

@@ -1,0 +1,22 @@
+name: CodeQL
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"
+
+jobs:
+  analyze:
+    runs-on: windows-latest
+    permissions:
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: cpp
+      - name: Build
+        shell: cmd
+        run: scripts\build.cmd app
+      - uses: github/codeql-action/analyze@v3

@@ -1,0 +1,3 @@
+#!/bin/sh
+# Runs the full check before every push; enable with: git config core.hooksPath .githooks
+cmd //c "scripts\check.cmd"

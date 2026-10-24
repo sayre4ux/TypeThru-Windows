@@ -1,0 +1,18 @@
+# Build outputs and local state
+.build/
+*.obj
+*.exe
+*.res
+*.zip
+*.sig
+debug*.log
+
+# The update signing key's private export stays local
+update-key-private.txt
+
+# Editors and OS
+.vs/
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini

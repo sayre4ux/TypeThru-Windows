@@ -1,0 +1,41 @@
+@echo off
+rem Builds TypeThru and makes the release files into .build\release\:
+rem   TypeThru-<version>-win64.zip      portable copy (the app itself updates from this)
+rem   TypeThru-<version>-win64.zip.sig  update signature (needs the TypeThru-Update key)
+rem   TypeThru-Setup-<version>.exe      installer, when Inno Setup is installed
+rem The version comes from src\version.h.
+setlocal enabledelayedexpansion
+cd /d "%~dp0.."
+
+for /f "tokens=3" %%v in ('findstr /c:"#define TYPETHRU_VERSION_STRING_A" src\version.h') do set RAW=%%v
+set VERSION=%RAW:"=%
+if "%VERSION%"=="" (
+    echo error: could not read the version from src\version.h 1>&2
+    exit /b 1
+)
+echo packaging version %VERSION%
+
+call scripts\build.cmd all || exit /b 1
+
+set OUT=.build\release
+if exist "%OUT%" rmdir /s /q "%OUT%"
+mkdir "%OUT%\TypeThru"
+copy /y .build\TypeThru.exe "%OUT%\TypeThru\" >nul
+
+powershell -NoProfile -Command "Compress-Archive -Path '.build\release\TypeThru\*' -DestinationPath '.build\release\TypeThru-%VERSION%-win64.zip' -Force" || exit /b 1
+
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\sign-update.ps1 ".build\release\TypeThru-%VERSION%-win64.zip" || exit /b 1
+
+set ISCC=%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe
+if exist "%ISCC%" (
+    powershell -NoProfile -Command "Set-Content -Encoding ascii installer\version.ini '[TypeThru]`nVersion=%VERSION%'"
+    "%ISCC%" installer\typethru.iss >nul || exit /b 1
+    del installer\version.ini
+    echo built installer TypeThru-Setup-%VERSION%.exe
+) else (
+    echo note: Inno Setup not found; skipped the installer ^(zip only^)
+)
+
+powershell -NoProfile -Command "Get-FileHash '.build\release\TypeThru-%VERSION%-win64.zip' -Algorithm SHA256 | Format-List"
+
+echo done: .build\release\
