@@ -63,8 +63,9 @@ Run `scripts\test.cmd` after every code change and `scripts\check.cmd` before a 
 
 ## Architecture
 
-**Trigger.** Full-screen VDI clients swallow every key before RegisterHotKey runs,
-so the floating Type button (WS_EX_NOACTIVATE, always on top, click = the panel's
+**Trigger.** Full-screen VDI clients swallow every key before RegisterHotKey runs
+(tested live: even Ctrl+Alt+Shift+T does not survive an immersive-mode grab, so
+do not try to beat a grab with an exotic chord), so the floating Type button (WS_EX_NOACTIVATE, always on top, click = the panel's
 Type Clipboard flow; drag moves it, right-click hides it, position saved in the
 registry) is on by default and is the trigger that works everywhere. Otherwise,
 RegisterHotKey (Ctrl+; = VK_OEM_1 + MOD_CONTROL, `MOD_NOREPEAT`) fires
