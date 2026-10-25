@@ -345,7 +345,7 @@ static bool parseVersion(const std::wstring& text, VersionParts& out, bool allow
 static bool sameVersion(const std::wstring& left, const std::wstring& right) {
     VersionParts a, b;
     return parseVersion(left, a) && parseVersion(right, b)
-        && std::equal(a.value, a.value + ARRAYSIZE(a.value), b.value);
+        && std::equal(std::begin(a.value), std::end(a.value), std::begin(b.value));
 }
 
 static bool newerVersion(const std::wstring& candidate, const std::wstring& current) {
