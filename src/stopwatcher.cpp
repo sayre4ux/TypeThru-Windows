@@ -6,9 +6,9 @@ static bool keyDown(int vk) { return (GetAsyncKeyState(vk) & 0x8000) != 0; }
 
 StopWatcher::StopWatcher(HWND targetWindow) : target(targetWindow) {
     InitializeCriticalSection(&lock);
-    const int buttons[3] = {VK_LBUTTON, VK_RBUTTON, VK_MBUTTON};
+    const int buttons[5] = {VK_LBUTTON, VK_RBUTTON, VK_MBUTTON, VK_XBUTTON1, VK_XBUTTON2};
     // Buttons already down when typing starts (finishing a click on the target field) do not count.
-    for (int i = 0; i < 3; i++) wasDown[i] = keyDown(buttons[i]);
+    for (int i = 0; i < 5; i++) wasDown[i] = keyDown(buttons[i]);
     thread = std::thread(&StopWatcher::run, this);
 }
 
@@ -28,11 +28,11 @@ std::wstring StopWatcher::stopReason() const {
 void StopWatcher::finish() { finished = true; }
 
 void StopWatcher::run() {
-    const int buttons[3] = {VK_LBUTTON, VK_RBUTTON, VK_MBUTTON};
+    const int buttons[5] = {VK_LBUTTON, VK_RBUTTON, VK_MBUTTON, VK_XBUTTON1, VK_XBUTTON2};
     while (!finished) {
         std::wstring found;
         if (keyDown(VK_ESCAPE)) found = L"Esc was pressed";
-        for (int i = 0; i < 3 && found.empty(); i++) {
+        for (int i = 0; i < 5 && found.empty(); i++) {
             bool down = keyDown(buttons[i]);
             if (down && !wasDown[i]) found = L"the mouse was clicked";
             wasDown[i] = down;

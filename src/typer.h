@@ -4,6 +4,7 @@
 #include "stopwatcher.h"
 #include <string>
 #include <vector>
+#include <functional>
 
 namespace tt {
 
@@ -39,6 +40,15 @@ public:
     // Builds the inputs for one character without sending them; empty when it cannot be typed.
     static std::vector<Step> stepsFor(wchar_t ch, const KeyMap& map, Method method,
                                       int holdMs, int gapMs);
+
+    static std::vector<Step> unicodePairSteps(wchar_t high, wchar_t low, int holdMs, int gapMs);
+
+    // Injectable event transport: production uses SendInput, tests only collect structs.
+    // On failure/cancellation, release only keys successfully pressed by this sequence.
+    static std::wstring executeSteps(const std::vector<Step>& steps,
+        const std::function<bool(const INPUT&)>& send,
+        const std::function<std::wstring()>& stop,
+        const std::function<void(int)>& wait);
 
     // Types `text` into the foreground target; blocks. Check stopReason only between inputs.
     static TypeResult type(const std::wstring& text, const KeyMap& map, double intervalSeconds,

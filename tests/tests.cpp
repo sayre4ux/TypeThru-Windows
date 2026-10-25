@@ -235,7 +235,10 @@ static void testSignature() {
         expect(updater::verifySignatureWithKey(data, sizeof(data), signature.data(), signature.size(),
                                                blob.data(), static_cast<unsigned long>(size)),
                "valid signature verifies");
-        expect(!updater::verifySignatureWithKey(data, sizeof(data) + 1, signature.data(), signature.size(),
+        unsigned char tampered[sizeof(data)];
+        memcpy(tampered, data, sizeof(data));
+        tampered[0] ^= 1;
+        expect(!updater::verifySignatureWithKey(tampered, sizeof(tampered), signature.data(), signature.size(),
                                                 blob.data(), static_cast<unsigned long>(size)),
                "tampered data rejected");
     } else {
@@ -245,7 +248,14 @@ static void testSignature() {
     if (algorithm) BCryptCloseAlgorithmProvider(algorithm, 0);
 }
 
+#include "engine_tests.h"
+#include "update_tests.h"
+
 int main() {
+    testUpdaterHardening(expect);
+    testClipboardBounds();
+    testInputFailures();
+    testDeadKeyIsolation();
     testTrailingLineBreaks();
     testTiming();
     testVersions();

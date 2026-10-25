@@ -28,6 +28,8 @@ struct Settings {
 };
 
 // Reads the clipboard once, as text. Never writes or keeps it around.
+// Bounded parsing also rejects unterminated clipboard allocations.
+std::wstring clipboardTextFromBytes(const void* data, size_t bytes);
 std::wstring readClipboardText();
 
 }

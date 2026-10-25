@@ -30,8 +30,8 @@ wchar_t KeyMap::keyCharacter(UINT vk, bool shift, HKL layout) {
     BYTE state[256] = {};
     if (shift) state[VK_SHIFT] = 0x80;
     wchar_t buffer[8];
-    // Flag 2 keeps the layout's dead-key state untouched, like the macOS no-dead-keys option.
-    int written = ToUnicodeEx(vk, MapVirtualKeyExW(vk, MAPVK_VK_TO_VSC_EX, layout), state, buffer, 8, 2, layout);
+    // Bit 2 (0x4) leaves dead-key state untouched; value 2 means key-break translation.
+    int written = ToUnicodeEx(vk, MapVirtualKeyExW(vk, MAPVK_VK_TO_VSC_EX, layout), state, buffer, 8, 4, layout);
     if (written == 1 && buffer[0] >= 0x20 && buffer[0] != 0x7F) return buffer[0];
     return 0;
 }

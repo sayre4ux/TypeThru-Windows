@@ -10,6 +10,11 @@ static bool isFunctionKey(UINT vk) { return vk >= VK_F1 && vk <= VK_F20; }
 Shortcut Shortcut::standard() { return Shortcut{VK_OEM_1, MOD_CONTROL}; }
 
 std::wstring Shortcut::problem() const {
+    if (vk < VK_BACK || vk > 0xFE || vk == VK_SHIFT || vk == VK_CONTROL || vk == VK_MENU
+        || vk == VK_LWIN || vk == VK_RWIN || (vk >= VK_LSHIFT && vk <= VK_RMENU)
+        || (modifiers & ~(MOD_CONTROL | MOD_ALT | MOD_SHIFT | MOD_WIN))) {
+        return L"Choose a key and valid shortcut modifiers.";
+    }
     if (vk == VK_ESCAPE) return L"Esc stops typing, so it cannot start it.";
     if (!isFunctionKey(vk) && !hasFlag(modifiers, MOD_CONTROL) && !hasFlag(modifiers, MOD_ALT)
         && !hasFlag(modifiers, MOD_WIN)) {

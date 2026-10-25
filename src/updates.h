@@ -55,6 +55,9 @@ int finalizeUpdate(const std::wstring& oldPath);
 void rememberOffer(const std::optional<Release>& release);
 std::optional<Release> savedOffer();
 bool offerIsNewer(const Release& release, const std::wstring& currentVersion);
+// Strict numeric resource-version match plus a downgrade check, shared by install and tests.
+bool isInstallableVersion(const std::wstring& embeddedVersion, const std::wstring& offeredVersion,
+                          const std::wstring& currentVersion);
 
 }
 

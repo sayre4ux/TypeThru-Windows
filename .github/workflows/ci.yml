@@ -15,5 +15,5 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: TypeThru-windows
-          path: .build/TypeThru.exe
+          path: .build/check/TypeThru.exe
           if-no-files-found: error

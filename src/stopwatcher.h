@@ -18,6 +18,7 @@ public:
     std::wstring stopReason() const;
 
     void finish();
+    HWND targetWindow() const { return target; }
 
 private:
     void run();
@@ -25,7 +26,7 @@ private:
     std::wstring reason;          // guarded by the mutex below
     mutable CRITICAL_SECTION lock;
     HWND target = nullptr;
-    bool wasDown[3] = {false, false, false};  // left, right, middle at start
+    bool wasDown[5] = {};  // left, right, middle and side buttons at start
     std::thread thread;
 };
 

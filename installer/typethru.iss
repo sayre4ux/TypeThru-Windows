@@ -1,6 +1,6 @@
 ; Inno Setup script for TypeThru. Build with scripts\package.cmd (finds ISCC),
 ; or directly:  ISCC installer\typethru.iss
-#define Version ReadIni(SourcePath + "\..\installer\version.ini", "TypeThru", "Version", "0.1.0")
+#define Version GetStringFileInfo(SourcePath + "\..\.build\TypeThru.exe", "ProductVersion")
 
 [Setup]
 AppId={{8E9C4D21-7B6A-4E5F-9C3D-1A2B3C4D5E6F}
@@ -11,13 +11,13 @@ AppPublisherURL=https://github.com/sayre4ux/TypeThru-Windows
 DefaultDirName={autopf}\TypeThru
 DefaultGroupName=TypeThru
 UninstallDisplayIcon={app}\TypeThru.exe
-OutputDir=..\installer
+OutputDir=..\.build\release
 OutputBaseFilename=TypeThru-Setup-{#Version}
 Compression=lzma2/max
 SolidCompression=yes
 ArchitecturesInstallIn64BitMode=x64compatible
+ArchitecturesAllowed=x64compatible
 PrivilegesRequired=lowest
-PrivilegesRequiredOverridesAllowed=dialog
 MinVersion=10.0.19044
 WizardStyle=modern
 DisableProgramGroupPage=yes

@@ -5,6 +5,7 @@ rem   TypeThru-<version>-win64.zip.sig  update signature (needs the TypeThru-Upd
 rem   TypeThru-Setup-<version>.exe      installer, when Inno Setup is installed
 rem The version comes from src\version.h.
 setlocal enabledelayedexpansion
+set TYPETHRU_BUILD_DIR=.build
 cd /d "%~dp0.."
 
 for /f "tokens=3" %%v in ('findstr /c:"#define TYPETHRU_VERSION_STRING_A" src\version.h') do set RAW=%%v
@@ -32,9 +33,7 @@ for %%p in ("%ProgramFiles%\Inno Setup 7\ISCC.exe" "%ProgramFiles(x86)%\Inno Set
     if not defined ISCC if exist %%p set ISCC=%%~p
 )
 if defined ISCC (
-    powershell -NoProfile -Command "Set-Content -Encoding ascii installer\version.ini '[TypeThru]`nVersion=%VERSION%'"
     "%ISCC%" installer\typethru.iss >nul || exit /b 1
-    del installer\version.ini
     echo built installer TypeThru-Setup-%VERSION%.exe
 ) else (
     echo note: Inno Setup not found; skipped the installer ^(zip only^)

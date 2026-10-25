@@ -84,6 +84,16 @@ void Settings::setRunAtLogin(bool on) const {
     }
 }
 
+std::wstring clipboardTextFromBytes(const void* data, size_t bytes) {
+    if (!data || bytes % sizeof(wchar_t) != 0 || bytes > (16u << 20)) return {};
+    const auto* raw = static_cast<const wchar_t*>(data);
+    size_t count = bytes / sizeof(wchar_t);
+    for (size_t i = 0; i < count; i++) {
+        if (raw[i] == 0) return std::wstring(raw, i);
+    }
+    return {};
+}
+
 std::wstring readClipboardText() {
     if (!OpenClipboard(nullptr)) {
         // The clipboard can be briefly held by another process; one retry settles it.
@@ -93,7 +103,7 @@ std::wstring readClipboardText() {
     std::wstring text;
     if (HANDLE handle = GetClipboardData(CF_UNICODETEXT)) {
         if (const wchar_t* raw = static_cast<const wchar_t*>(GlobalLock(handle))) {
-            text = raw;
+            text = clipboardTextFromBytes(raw, GlobalSize(handle));
             GlobalUnlock(handle);
         }
     }
