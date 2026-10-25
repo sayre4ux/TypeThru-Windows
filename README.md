@@ -84,7 +84,7 @@ but cannot represent Shift+Enter. Choose another method for protected line break
 Visual Studio 2022 with the C++ desktop workload:
 
 ```bat
-scripts\build.cmd all     :: .build\TypeThru.exe, TypeThruPOC.exe, Tests.exe
+scripts\build.cmd all     :: .build\TypeThru.exe, Tests.exe
 .build\Tests.exe          :: unit tests; posts no input
 scripts\check.cmd         :: isolated clean build + tests in .build\check\
 scripts\package.cmd       :: release zip + update signature (+ installer when Inno Setup 6 is present)
@@ -99,18 +99,6 @@ See [the audit and validation notes](docs/AUDIT.md) and the
 [manual acceptance checklist](docs/MANUAL-TESTS.md) before releasing this revision.
 The [visual design notes](docs/UI-DESIGN.md) include dark and light offline previews
 and the redesigned floating button in 0.2.2.
-
-## Testing against a remote session
-
-`TypeThruPOC.exe` is a standalone proof-of-concept for checking a VDI setup before
-installing anything:
-
-```bat
-.build\TypeThruPOC.exe --method scancode "abc123"
-.build\TypeThruPOC.exe --method unicode --interval 60 "café ☕"
-```
-
-Run it, click the remote session's text field, wait for the countdown.
 
 ## Privacy
 

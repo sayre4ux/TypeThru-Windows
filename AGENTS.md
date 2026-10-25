@@ -14,8 +14,8 @@ Win32, no package manager, no project file); `scripts\build.cmd` builds everythi
    session history and current state - its top entry is the most recent truth.
 2. Run `scripts\check.cmd` (tests + clean build) before touching anything, so
    you start from a known-good state.
-3. Hard rules, unchanged: never post real keyboard input (`--type`, the POC with
-   text, panel typing actions), never run installers/uninstallers, never commit
+3. Hard rules, unchanged: never post real keyboard input (`--type` or
+   panel typing actions), never run installers/uninstallers, never commit
    keys or the DEVLOG.
 4. The owner runs everything that needs a real screen: panel interactions,
    remote-session tests, setup and uninstall. When a change affects those, list
@@ -44,7 +44,7 @@ guest; do not regress them and do not re-litigate them without new evidence:
 
 | Path | Role |
 |---|---|
-| `scripts/build.cmd` | Entry point: `app`, `poc`, `tests`, or `all` into `.build\` |
+| `scripts/build.cmd` | Entry point: `app`, `tests`, `preview`, or `all` into `.build\` |
 | `scripts/test.cmd` | Runs `Tests.exe` |
 | `scripts/check.cmd` | Tests + a clean build; run before every push |
 | `scripts/package.cmd` | Release zip, update signature, installer (needs Inno Setup 6) |
@@ -60,7 +60,7 @@ guest; do not regress them and do not re-litigate them without new evidence:
 | `src/shared.cpp/.h` | Logic shared with the macOS app: symbol table, speeds, tests, versions |
 | `src/updates.cpp/.h` | GitHub release check, JSON parsing, ECDSA/CNG verify, install |
 | `src/updatekey.h` | The update public key; generated, never edited by hand |
-| `tools/poc.cpp` | Standalone POC for checking a remote session before installing |
+| `tools/render-ui.cpp` | Memory-only UI preview renderer; never posts input |
 | `tests/tests.cpp` | Unit tests; constructs inputs and inspects them, never posts |
 | `installer/typethru.iss` | Inno Setup script (per-user install, no admin) |
 | `res/` | Icon, manifest, version resource |
@@ -69,7 +69,7 @@ guest; do not regress them and do not re-litigate them without new evidence:
 ## Commands
 
 ```bat
-scripts\build.cmd all          :: build TypeThru.exe, TypeThruPOC.exe, Tests.exe
+scripts\build.cmd all          :: build TypeThru.exe and Tests.exe
 .build\Tests.exe               :: unit tests; posts no input
 scripts\check.cmd              :: everything required before a push
 .build\TypeThru.exe --print-map "text"    :: keys a text would use; types nothing
@@ -80,7 +80,7 @@ Run `scripts\test.cmd` after every code change and `scripts\check.cmd` before a 
 
 ## What an agent must not do
 
-- **Never post real keyboard input.** Do not run `--type`, `TypeThruPOC.exe` with text,
+- **Never post real keyboard input.** Do not run `--type`
   or any UI action that triggers typing. Unit tests construct and inspect INPUT structs;
   they never call SendInput. `--print-map` and `--version` are safe.
 - **Never run the installer or uninstaller**, or delete registry keys outside a test.

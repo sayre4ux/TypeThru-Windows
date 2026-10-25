@@ -1,6 +1,6 @@
 @echo off
-rem Builds TypeThru.exe (default), TypeThruPOC.exe, and Tests.exe into .build\ (or TYPETHRU_BUILD_DIR).
-rem Usage: scripts\build.cmd [app|poc|tests|preview|all]
+rem Builds TypeThru.exe and Tests.exe into .build\ (or TYPETHRU_BUILD_DIR).
+rem Usage: scripts\build.cmd [app|tests|preview|all]
 setlocal enabledelayedexpansion
 cd /d "%~dp0.."
 set TARGET=%1
@@ -27,10 +27,9 @@ set COMMON=/nologo /std:c++17 /utf-8 /W4 /WX /EHsc /O2 /DUNICODE /D_UNICODE /c /
 
 if "%TARGET%"=="app"   goto app
 if "%TARGET%"=="all"   goto app
-if "%TARGET%"=="poc"   goto poc
 if "%TARGET%"=="tests" goto tests
 if "%TARGET%"=="preview" goto preview
-echo error: unknown target "%TARGET%" ^(app^|poc^|tests^|preview^|all^) 1>&2
+echo error: unknown target "%TARGET%" ^(app^|tests^|preview^|all^) 1>&2
 exit /b 1
 
 :app
@@ -39,12 +38,6 @@ if errorlevel 1 exit /b 1
 cl %COMMON% %CORE% src\main.cpp src\app.cpp src\ui.cpp src\settings.cpp src\hotkey.cpp src\updates.cpp || exit /b 1
 link /nologo /out:"%TYPETHRU_BUILD_DIR%\TypeThru.exe" /subsystem:windows /entry:wWinMainCRTStartup "%TYPETHRU_BUILD_DIR%\main.obj" "%TYPETHRU_BUILD_DIR%\app.obj" "%TYPETHRU_BUILD_DIR%\ui.obj" "%TYPETHRU_BUILD_DIR%\settings.obj" "%TYPETHRU_BUILD_DIR%\hotkey.obj" "%TYPETHRU_BUILD_DIR%\updates.obj" "%TYPETHRU_BUILD_DIR%\shared.obj" "%TYPETHRU_BUILD_DIR%\keymap.obj" "%TYPETHRU_BUILD_DIR%\typer.obj" "%TYPETHRU_BUILD_DIR%\stopwatcher.obj" "%TYPETHRU_BUILD_DIR%\typethru.res" user32.lib gdi32.lib gdiplus.lib shell32.lib advapi32.lib comctl32.lib winhttp.lib bcrypt.lib crypt32.lib winmm.lib || exit /b 1
 echo built "%TYPETHRU_BUILD_DIR%\TypeThru.exe"
-if not "%TARGET%"=="all" exit /b 0
-
-:poc
-cl %COMMON% %CORE% tools\poc.cpp || exit /b 1
-link /nologo /out:"%TYPETHRU_BUILD_DIR%\TypeThruPOC.exe" "%TYPETHRU_BUILD_DIR%\poc.obj" "%TYPETHRU_BUILD_DIR%\shared.obj" "%TYPETHRU_BUILD_DIR%\keymap.obj" "%TYPETHRU_BUILD_DIR%\typer.obj" "%TYPETHRU_BUILD_DIR%\stopwatcher.obj" user32.lib gdi32.lib shell32.lib winmm.lib || exit /b 1
-echo built "%TYPETHRU_BUILD_DIR%\TypeThruPOC.exe"
 if not "%TARGET%"=="all" exit /b 0
 
 :tests

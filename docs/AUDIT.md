@@ -52,7 +52,7 @@ malformed clipboard buffers, dead keys, URL/JSON attacks, and signature tamperin
 The signature tampering test itself was corrected to mutate an in-bounds byte;
 the old test requested a byte beyond its fixture.
 
-Final validation: `scripts/check.cmd` passed with all three targets built under
+Final validation: `scripts/check.cmd` passed with all targets built under
 `/W4 /WX`; **173 checks, zero failures**. Safe `--version` and `--print-map` smoke
 checks passed, executable resources report 0.2.0, and a preservation probe survived
 the clean check. `.build/review/TypeThru.exe` is a byte-identical copy of the checked

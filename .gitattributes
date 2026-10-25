@@ -1,0 +1,2 @@
+# Keep Windows batch label parsing consistent across checkouts.
+*.cmd text eol=crlf
