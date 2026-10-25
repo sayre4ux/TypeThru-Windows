@@ -39,6 +39,6 @@ if defined ISCC (
     echo note: Inno Setup not found; skipped the installer ^(zip only^)
 )
 
-powershell -NoProfile -Command "Get-FileHash '.build\release\TypeThru-%VERSION%-win64.zip' -Algorithm SHA256 | Format-List"
+powershell -NoProfile -Command "$ErrorActionPreference='Stop'; $sha=[Security.Cryptography.SHA256]::Create(); $stream=[IO.File]::OpenRead('.build\release\TypeThru-%VERSION%-win64.zip'); try { [BitConverter]::ToString($sha.ComputeHash($stream)).Replace('-','').ToLowerInvariant() } finally { $stream.Dispose(); $sha.Dispose() }" || exit /b 1
 
 echo done: .build\release\
